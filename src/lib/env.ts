@@ -17,7 +17,7 @@ export function validateEnvironment(): AppEnvironment {
   const nodeEnv = (process.env.NODE_ENV as "development" | "production" | "test") || "development";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const aiProvider = process.env.AI_PROVIDER || process.env.DEFAULT_AI_PROVIDER || "gemini";
-  const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const geminiModel = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const defaultAiModel = process.env.DEFAULT_AI_MODEL || geminiModel;
 
   return {

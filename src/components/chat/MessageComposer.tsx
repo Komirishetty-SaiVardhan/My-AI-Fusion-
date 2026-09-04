@@ -16,6 +16,7 @@ import {
   Search,
 } from "lucide-react";
 import { useChat } from "@/context/ChatContext";
+import { VoiceInputButton } from "./VoiceInputButton";
 import { cn } from "@/lib/utils";
 
 interface UploadedImageState {
@@ -364,20 +365,10 @@ export function MessageComposer() {
             </button>
 
             {/* Voice Dictation Button */}
-            <button
-              type="button"
-              onClick={handleVoiceToggle}
-              className={cn(
-                "p-1.5 rounded-lg transition-colors cursor-pointer",
-                isRecording
-                  ? "text-red-500 bg-red-500/15 animate-pulse"
-                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
-              )}
-              title="Voice dictation"
-              aria-label="Voice input"
-            >
-              <Mic className="w-3.5 h-3.5" />
-            </button>
+            <VoiceInputButton
+              onTranscript={(text) => setInput((prev) => (prev ? prev + " " + text : text))}
+              disabled={isStreaming}
+            />
 
             {/* Attach Image / Document Button */}
             <button

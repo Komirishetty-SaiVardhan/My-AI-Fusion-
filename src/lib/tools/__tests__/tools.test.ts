@@ -217,6 +217,41 @@ export async function runToolsTestSuite(): Promise<boolean> {
   assert(toolDefs.some((t) => t.function.name === "calculator"), "Calculator tool definition exported");
   assert(toolDefs.some((t) => t.function.name === "web_search"), "Web search tool definition exported");
 
+  // ============================================================================
+  // Test 10: Image Generator Tool Execution
+  // ============================================================================
+  console.log("\n[10] Testing: Image Generator Tool");
+  const imageGen = new (await import("../tools/image-generator")).ImageGeneratorTool();
+  registry.registerTool(imageGen);
+  const imgRes = await executor.executeTool(
+    "image_generator",
+    { prompt: "Futuristic neon city at night", aspectRatio: "16:9", style: "photorealistic" },
+    baseContext
+  );
+  assert(imgRes.success === true, "Image generation tool executed successfully");
+  assert(Boolean((imgRes.data as { imageUrl: string })?.imageUrl?.includes("pollinations.ai")), "Image URL generated correctly");
+  assert((imgRes.data as { width: number })?.width === 1280, "16:9 width mapped to 1280");
+
+  // ============================================================================
+  // Test 11: Document Generator Tool Execution
+  // ============================================================================
+  console.log("\n[11] Testing: Document Generator Tool");
+  const docGen = new (await import("../tools/document-generator")).DocumentGeneratorTool();
+  registry.registerTool(docGen);
+  const docRes = await executor.executeTool(
+    "document_generator",
+    {
+      title: "Project Proposal",
+      documentType: "proposal",
+      summary: "Executive summary for proposal",
+      sections: [{ heading: "Scope", content: "Detailed scope of work" }],
+    },
+    baseContext
+  );
+  assert(docRes.success === true, "Document generator tool executed successfully");
+  assert((docRes.data as { isPrintReady: boolean })?.isPrintReady === true, "Document marked print ready");
+  assert(Boolean((docRes.data as { formattedMarkdown: string })?.formattedMarkdown?.includes("# Project Proposal")), "Document title formatted in markdown");
+
   console.log("\n=================================================");
   console.log(`ALL TOOL-CALLING FRAMEWORK TESTS PASSED (${passed}/${total})`);
   console.log("=================================================");

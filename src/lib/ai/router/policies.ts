@@ -6,11 +6,15 @@ import { TaskCategory, RoutingPolicy } from "./types";
  */
 export const MODELS = {
   // Google Gemini Models (Primary Default)
-  GEMINI_FLASH_LATEST: "gemini-flash-latest",
-  GEMINI_2_5_FLASH: "gemini-2.5-flash",
-  GEMINI_2_0_FLASH: "gemini-2.0-flash",
-  GEMINI_1_5_FLASH: "gemini-1.5-flash",
-  GEMINI_1_5_PRO: "gemini-1.5-pro",
+  GEMINI_3_6_FLASH: "gemini-3.6-flash",
+  GEMINI_3_7_FLASH: "gemini-3.7-flash",
+  GEMINI_3_5_FLASH: "gemini-3.5-flash",
+  GEMINI_3_5_FLASH_LITE: "gemini-3.5-flash-lite",
+  GEMINI_FLASH_LATEST: "gemini-3.6-flash",
+  GEMINI_2_5_FLASH: "gemini-3.6-flash",
+  GEMINI_2_0_FLASH: "gemini-3.6-flash",
+  GEMINI_1_5_FLASH: "gemini-3.5-flash",
+  GEMINI_1_5_PRO: "gemini-3.7-flash",
   TEXT_EMBEDDING_004: "text-embedding-004",
 
   // Local Open-Source Models (Ollama)
@@ -38,8 +42,8 @@ export const MODELS = {
 export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   SIMPLE: {
     category: "SIMPLE",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_FLASH, MODELS.LLAMA_3_2, MODELS.GPT_4O_MINI],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_5_FLASH_LITE, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 15000,
     confidenceThreshold: 0.7,
     escalationTarget: "GENERAL",
@@ -47,8 +51,8 @@ export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   },
   GENERAL: {
     category: "GENERAL",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_PRO, MODELS.LLAMA_3_2, MODELS.GPT_4O],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_7_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 30000,
     confidenceThreshold: 0.65,
     escalationTarget: "REASONING",
@@ -56,16 +60,16 @@ export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   },
   REASONING: {
     category: "REASONING",
-    primaryModel: MODELS.GEMINI_1_5_PRO,
-    fallbackModels: [MODELS.GEMINI_2_5_FLASH, MODELS.DEEPSEEK_R1, MODELS.O3_MINI],
+    primaryModel: MODELS.GEMINI_3_7_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_6_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 60000,
     confidenceThreshold: 0.6,
     description: "Deep reasoning for mathematical proofs, algorithmic analysis, and complex deductions",
   },
   RESEARCH: {
     category: "RESEARCH",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_PRO, MODELS.LLAMA_3_2, MODELS.GPT_4O],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_7_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 40000,
     confidenceThreshold: 0.65,
     requiresTools: ["web_search"],
@@ -73,8 +77,8 @@ export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   },
   CODING: {
     category: "CODING",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_PRO, MODELS.QWEN_2_5_CODER, MODELS.CLAUDE_3_5_SONNET],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_7_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 45000,
     confidenceThreshold: 0.7,
     escalationTarget: "REASONING",
@@ -82,8 +86,8 @@ export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   },
   VISION: {
     category: "VISION",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_PRO, MODELS.LLAVA, MODELS.GPT_4O],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_7_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 40000,
     confidenceThreshold: 0.85,
     requiresTools: ["multimodal_vision"],
@@ -91,8 +95,8 @@ export const DEFAULT_ROUTING_POLICIES: Record<TaskCategory, RoutingPolicy> = {
   },
   FILE_ANALYSIS: {
     category: "FILE_ANALYSIS",
-    primaryModel: MODELS.GEMINI_FLASH_LATEST,
-    fallbackModels: [MODELS.GEMINI_1_5_PRO, MODELS.LLAMA_3_2, MODELS.GPT_4O],
+    primaryModel: MODELS.GEMINI_3_6_FLASH,
+    fallbackModels: [MODELS.GEMINI_3_7_FLASH, MODELS.GEMINI_3_5_FLASH],
     timeoutMs: 45000,
     confidenceThreshold: 0.8,
     requiresTools: ["file_retrieval"],

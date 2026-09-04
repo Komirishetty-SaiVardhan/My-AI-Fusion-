@@ -13,12 +13,26 @@ import {
   ChevronDown,
   ChevronRight,
   Square,
+  FileDown,
+  FileText,
+  FileType,
+  Printer,
+  Download,
 } from "lucide-react";
 import { ChatMessage as ChatMessageType } from "@/types/chat";
 import { CodeBlock } from "./CodeBlock";
 import { AutoInspectionDrawer } from "./AutoInspectionDrawer";
+import { ImageCard } from "./ImageCard";
+import { AudioReaderButton } from "./AudioReaderButton";
+import { ChartRenderer, parseChartCodeBlock } from "./ChartRenderer";
 import { formatTime, cn } from "@/lib/utils";
 import { useChat } from "@/context/ChatContext";
+import {
+  exportToPdf,
+  downloadAsMarkdown,
+  downloadAsDoc,
+  downloadAsTxt,
+} from "@/lib/export-document";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -29,9 +43,24 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const { regenerateResponse, retryMessage, isStreaming } = useChat();
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(true);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
+
+  // Extract a clean title from the document if available
+  const firstHeadingMatch = message.content.match(/^#+\s+(.+)$/m);
+  const docTitle = firstHeadingMatch ? firstHeadingMatch[1].trim() : "My AI Document";
+
+  // Check if content looks like a structured document, report, or proposal
+  const isDocumentLike =
+    isAssistant &&
+    message.content.length > 200 &&
+    (message.content.includes("# ") ||
+      message.content.includes("## ") ||
+      message.content.includes("| ---") ||
+      message.content.includes("Executive Summary") ||
+      message.content.includes("Table of Contents"));
 
   const handleCopyMessage = async () => {
     try {
@@ -43,13 +72,35 @@ export function ChatMessage({ message }: ChatMessageProps) {
     }
   };
 
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: docTitle,
+      content: message.content,
+      author: "Komirishetty Sai Vardhan",
+    });
+    setExportMenuOpen(false);
+  };
+
+  const handleDownloadDoc = () => {
+    downloadAsDoc(docTitle, message.content, "Komirishetty Sai Vardhan");
+    setExportMenuOpen(false);
+  };
+
+  const handleDownloadMd = () => {
+    downloadAsMarkdown(docTitle, message.content);
+    setExportMenuOpen(false);
+  };
+
+  const handleDownloadTxt = () => {
+    downloadAsTxt(docTitle, message.content);
+    setExportMenuOpen(false);
+  };
+
   return (
     <div
       className={cn(
         "group relative flex w-full gap-3.5 py-4 px-3 sm:px-5 transition-colors rounded-xl",
-        isUser
-          ? "justify-end"
-          : "justify-start hover:bg-slate-500/5"
+        isUser ? "justify-end" : "justify-start hover:bg-slate-500/5"
       )}
     >
       {/* Assistant Avatar */}
@@ -66,7 +117,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           isUser && "items-end"
         )}
       >
-        {/* Author / Timestamp Header for user */}
+        {/* Author / Timestamp Header */}
         <div className="flex items-center gap-2 mb-1 text-[11px] text-[var(--muted-foreground)] select-none">
           <span className="font-medium">{isUser ? "You" : "My AI"}</span>
           <span>•</span>
@@ -130,6 +181,42 @@ export function ChatMessage({ message }: ChatMessageProps) {
               </div>
             )}
 
+            {/* Document Header Banner for structured documents / reports */}
+            {isDocumentLike && message.status !== "streaming" && (
+              <div className="mb-3 p-2.5 rounded-xl border border-sky-500/20 bg-sky-500/5 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="truncate">
+                    <span className="font-semibold text-[var(--foreground)] truncate block">
+                      {docTitle}
+                    </span>
+                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                      Publication Ready Document
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={handleExportPdf}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-[11px] shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Printer className="w-3 h-3" />
+                    <span>Export PDF</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadDoc}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] text-[var(--foreground)] font-medium text-[11px] transition-colors cursor-pointer"
+                  >
+                    <FileType className="w-3 h-3" />
+                    <span>Word .doc</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Loading / Thinking indicator */}
             {message.status === "sending" && !message.content && (
               <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] py-2">
@@ -148,8 +235,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
+                    img({ src, alt }) {
+                      if (!src) return null;
+                      return <ImageCard src={String(src)} alt={alt} />;
+                    },
                     code({ className, children, ...props }) {
                       const match = /language-(\w+)/.exec(className || "");
+                      const rawCode = String(children).replace(/\n$/, "");
                       const isInline = !match && !String(children).includes("\n");
 
                       if (isInline) {
@@ -160,10 +252,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
                         );
                       }
 
+                      if (match && (match[1] === "chart" || match[1] === "json")) {
+                        const chartConfig = parseChartCodeBlock(rawCode);
+                        if (chartConfig) {
+                          return <ChartRenderer chartData={chartConfig} />;
+                        }
+                      }
+
                       return (
                         <CodeBlock
                           language={match ? match[1] : ""}
-                          value={String(children).replace(/\n$/, "")}
+                          value={rawCode}
                         />
                       );
                     },
@@ -202,12 +301,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
               </div>
             )}
 
-            {/* Action Bar (Copy & Regenerate) */}
+            {/* Action Bar (Copy, Export PDF, Download, Regenerate) */}
             {message.content && message.status !== "streaming" && (
-              <div className="flex items-center gap-1 mt-2.5 text-[var(--muted-foreground)] opacity-80 group-hover:opacity-100 transition-opacity">
+              <div className="flex flex-wrap items-center gap-1.5 mt-3 text-[var(--muted-foreground)] opacity-85 group-hover:opacity-100 transition-opacity">
+                {/* Copy Button */}
                 <button
                   onClick={handleCopyMessage}
-                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs cursor-pointer border border-transparent hover:border-[var(--border)]"
                   title="Copy message"
                   aria-label="Copy full message"
                 >
@@ -224,10 +324,74 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   )}
                 </button>
 
+                {/* Audio Listen / TTS Button */}
+                <AudioReaderButton text={message.content} />
+
+                {/* PDF Export Button */}
+                <button
+                  onClick={handleExportPdf}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-sky-500/10 hover:text-sky-500 transition-colors text-xs cursor-pointer border border-transparent hover:border-sky-500/20"
+                  title="Export response as PDF document"
+                  aria-label="Export response as PDF"
+                >
+                  <FileDown className="w-3 h-3 text-sky-500" />
+                  <span>Export PDF</span>
+                </button>
+
+                {/* Document Download Dropdown Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setExportMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs cursor-pointer border border-transparent hover:border-[var(--border)]"
+                    title="Download document in different formats"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Download</span>
+                    <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                  </button>
+
+                  {exportMenuOpen && (
+                    <div
+                      className="absolute left-0 bottom-full mb-1 w-44 rounded-xl border border-[var(--border)] bg-[var(--popover)] text-[var(--popover-foreground)] shadow-lg p-1 z-40 animate-in fade-in zoom-in-95 duration-100"
+                      onMouseLeave={() => setExportMenuOpen(false)}
+                    >
+                      <button
+                        onClick={handleExportPdf}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-sky-500/10 hover:text-sky-500 transition-colors cursor-pointer text-left font-medium"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-sky-500" />
+                        <span>Print / PDF Document</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadDoc}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer text-left"
+                      >
+                        <FileType className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Word Document (.doc)</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadMd}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer text-left"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Markdown (.md)</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadTxt}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer text-left"
+                      >
+                        <FileDown className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Plain Text (.txt)</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Regenerate Button */}
                 <button
                   onClick={() => regenerateResponse(message.id)}
                   disabled={isStreaming}
-                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs cursor-pointer disabled:opacity-40"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs cursor-pointer disabled:opacity-40 border border-transparent hover:border-[var(--border)] ml-auto sm:ml-0"
                   title="Regenerate response"
                   aria-label="Regenerate this response"
                 >

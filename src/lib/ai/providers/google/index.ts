@@ -41,15 +41,46 @@ export class GoogleAdapter extends BaseAIAdapter {
 
   /**
    * Retrieves the configured default model.
-   * Defaults to 'gemini-2.5-flash' (or 'gemini-1.5-flash').
+   * Defaults to 'gemini-3.6-flash'.
    */
   getDefaultModel(): string {
     return (
       this.configuredModel ||
       process.env.GEMINI_MODEL ||
       process.env.DEFAULT_AI_MODEL ||
-      "gemini-flash-latest"
+      "gemini-3.6-flash"
     );
+  }
+
+  /**
+   * Resolves an ordered list of candidate models for fallback resilience.
+   */
+  private resolveCandidateModels(requestedModel?: string): string[] {
+    const raw = requestedModel || this.getDefaultModel();
+    // Upgrade deprecated, legacy, or foreign aliases to active high-performance Gemini endpoints
+    const primary =
+      raw === "gemini-flash-latest" ||
+      raw === "gemini-2.5-flash" ||
+      raw === "gemini-2.0-flash" ||
+      raw === "gemini-1.5-flash" ||
+      raw.startsWith("llama")
+        ? "gemini-3.6-flash"
+        : raw === "gemini-pro-latest" || raw === "gemini-1.5-pro"
+        ? "gemini-3.7-flash"
+        : raw === "gpt-4o" || raw.startsWith("gpt")
+        ? "gemini-3.5-flash"
+        : raw;
+
+    const fallbackChain = [
+      primary,
+      "gemini-3.6-flash",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
+    ];
+
+    return Array.from(new Set(fallbackChain));
   }
 
   /**
@@ -124,10 +155,19 @@ export class GoogleAdapter extends BaseAIAdapter {
       });
     }
 
+    if (statusCode === 503 || lower.includes("high demand") || lower.includes("unavailable")) {
+      throw new AIProviderError({
+        type: "server_error",
+        message: "Google Gemini is currently experiencing temporary high demand. Please retry in a few moments.",
+        statusCode: 503,
+        providerName: this.id,
+      });
+    }
+
     if (statusCode === 404) {
       throw new AIProviderError({
         type: "not_found",
-        message: "Gemini model was not found. Please verify your GEMINI_MODEL setting in .env.local (e.g. 'gemini-2.5-flash' or 'gemini-1.5-flash').",
+        message: "Gemini model was not found or is deprecated. Defaulting to gemini-3.6-flash.",
         statusCode: 404,
         providerName: this.id,
       });
@@ -142,15 +182,15 @@ export class GoogleAdapter extends BaseAIAdapter {
   }
 
   /**
-   * Non-streaming text generation using Google Gemini.
+   * Non-streaming text generation using Google Gemini with multi-tier fallback.
    */
   async generateText(params: GenerateTextParams): Promise<AITextResponse> {
     const apiKey = this.requireApiKey();
-    const model = params.model || this.getDefaultModel();
+    const candidateModels = this.resolveCandidateModels(params.model);
     const messages = this.normalizeMessages(params.messages);
     const startTime = Date.now();
 
-    aiLogger.info("ai_gateway_generate_text", { provider: this.id, model });
+    aiLogger.info("ai_gateway_generate_text", { provider: this.id, models: candidateModels });
 
     if (params.simulateError) {
       throw new AIProviderError({
@@ -161,120 +201,46 @@ export class GoogleAdapter extends BaseAIAdapter {
       });
     }
 
-    const contents = messages.map((m) => ({
+    const rawSystemMessage = messages.find((m) => m.role === "system")?.content;
+    const identityInstruction = `You are My AI, an intelligent, fast, reasoning, multimodal, and helpful AI assistant created and developed by Komirishetty Sai Vardhan.
+Your name is My AI. You were created and developed solely by Komirishetty Sai Vardhan. Never say you are Gemini or developed by Google. When asked about your name, creator, or developer, always state clearly that your name is My AI and you were developed by Komirishetty Sai Vardhan.
+
+CAPABILITIES:
+1. IMAGE GENERATION:
+When the user asks to generate, create, draw, paint, visualize, or prepare an image:
+- Formulate a vivid, detailed visual prompt describing the scene, lighting, perspective, and atmosphere.
+- Embed the generated image directly in your markdown response using:
+  ![Detailed Image Description](https://image.pollinations.ai/prompt/<URL_ENCODED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
+  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces).
+- Provide a brief description of the artwork composition.
+
+2. DOCUMENT & PDF PREPARATION:
+When the user asks to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
+- Structure the response as a complete, publication-ready Markdown document with clean hierarchical headings (# Title, ## Sections, ### Subsections), executive summaries, structured key takeaways, formatted data tables, and metadata.
+- Remind the user that they can export, print, or download the document as a PDF, Word (.doc), or Markdown file using the 'Export PDF' / 'Download' buttons directly below the message.`;
+    const systemMessage = rawSystemMessage
+      ? `${identityInstruction}\n\n${rawSystemMessage}`
+      : identityInstruction;
+
+    const nonSystemMessages = messages.filter((m) => m.role !== "system");
+    const contents = (nonSystemMessages.length > 0 ? nonSystemMessages : messages).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    try {
-      const endpoint = `${this.baseUrl}/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: params.temperature ?? 0.7,
-            maxOutputTokens: params.maxTokens,
-          },
-        }),
-        signal: params.signal,
-      });
+    let lastError: unknown = null;
 
-      if (!response.ok) {
-        const err = await response.text().catch(() => "");
-        this.handleGeminiError(err, response.status, "Gemini text generation failed");
-      }
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      return {
-        text,
-        finishReason: data.candidates?.[0]?.finishReason === "STOP" ? "stop" : "length",
-        model,
-        provider: this.id,
-        usage: data.usageMetadata
-          ? {
-              promptTokens: data.usageMetadata.promptTokenCount,
-              completionTokens: data.usageMetadata.candidatesTokenCount,
-              totalTokens: data.usageMetadata.totalTokenCount,
-            }
-          : undefined,
-        raw: data,
-      };
-    } catch (err) {
-      aiLogger.error("ai_gateway_generate_text_error", {
-        provider: this.id,
-        durationMs: Date.now() - startTime,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (err instanceof AIProviderError) throw err;
-      throw new AIProviderError({
-        type: "network_error",
-        message: err instanceof Error ? err.message : "Failed to connect to Google Gemini API",
-        statusCode: 503,
-        providerName: this.id,
-        rawError: err,
-      });
-    }
-  }
-
-  /**
-   * Real-time streaming response from Google Gemini API.
-   */
-  async *streamText(params: StreamTextParams): AsyncGenerator<AIStreamChunk, void, unknown> {
-    const apiKey = this.requireApiKey();
-    const model = params.model || this.getDefaultModel();
-    const messages = this.normalizeMessages(params.messages);
-    const startTime = Date.now();
-
-    aiLogger.info("ai_gateway_stream_text_start", { provider: this.id, model });
-
-    if (params.simulateError) {
-      yield { type: "status", statusMessage: "Contacting Google Gemini gateway..." };
-      throw new AIProviderError({
-        type: "rate_limit",
-        message: "Simulated Rate Limit (429) from Gemini Gateway.",
-        providerName: this.id,
-        statusCode: 429,
-      });
-    }
-
-    yield { type: "status", statusMessage: `Streaming from Google Gemini (${model})...` };
-
-    const contents = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-
-    let response: Response;
-    let activeModel = model;
-
-    try {
-      const endpoint = `${this.baseUrl}/models/${activeModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
-      response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: params.temperature ?? 0.7,
-            maxOutputTokens: params.maxTokens,
-          },
-        }),
-        signal: params.signal,
-      });
-
-      // If 503 High Demand on primary model, fallback to gemini-flash-lite-latest
-      if (!response.ok && response.status === 503 && activeModel !== "gemini-flash-lite-latest") {
-        activeModel = "gemini-flash-lite-latest";
-        yield { type: "status", statusMessage: `Connecting via high-speed Gemini Lite (${activeModel})...` };
-        const fallbackEndpoint = `${this.baseUrl}/models/${activeModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
-        response = await fetch(fallbackEndpoint, {
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i];
+      try {
+        const endpoint = `${this.baseUrl}/models/${activeModel}:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: systemMessage }],
+            },
             contents,
             generationConfig: {
               temperature: params.temperature ?? 0.7,
@@ -283,20 +249,178 @@ export class GoogleAdapter extends BaseAIAdapter {
           }),
           signal: params.signal,
         });
+
+        // If 503 or 404 or 429, try next model in fallback chain
+        if (!response.ok && (response.status === 503 || response.status === 404 || response.status === 429) && i < candidateModels.length - 1) {
+          aiLogger.warn("gemini_generate_text_fallback", {
+            failedModel: activeModel,
+            status: response.status,
+            nextModel: candidateModels[i + 1],
+          });
+          continue;
+        }
+
+        if (!response.ok) {
+          const err = await response.text().catch(() => "");
+          this.handleGeminiError(err, response.status, "Gemini text generation failed");
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        return {
+          text,
+          finishReason: data.candidates?.[0]?.finishReason === "STOP" ? "stop" : "length",
+          model: activeModel,
+          provider: this.id,
+          usage: data.usageMetadata
+            ? {
+                promptTokens: data.usageMetadata.promptTokenCount,
+                completionTokens: data.usageMetadata.candidatesTokenCount,
+                totalTokens: data.usageMetadata.totalTokenCount,
+              }
+            : undefined,
+          raw: data,
+        };
+      } catch (err) {
+        lastError = err;
+        if (err instanceof AIProviderError && (err.statusCode === 503 || err.statusCode === 404 || err.statusCode === 429) && i < candidateModels.length - 1) {
+          continue;
+        }
+        if (i < candidateModels.length - 1 && !(err instanceof DOMException && err.name === "AbortError")) {
+          continue;
+        }
+        throw err;
       }
-    } catch (err) {
+    }
+
+    aiLogger.error("ai_gateway_generate_text_error", {
+      provider: this.id,
+      durationMs: Date.now() - startTime,
+      error: lastError instanceof Error ? lastError.message : String(lastError),
+    });
+
+    if (lastError instanceof AIProviderError) throw lastError;
+    throw new AIProviderError({
+      type: "network_error",
+      message: lastError instanceof Error ? lastError.message : "Failed to connect to Google Gemini API",
+      statusCode: 503,
+      providerName: this.id,
+      rawError: lastError,
+    });
+  }
+
+  /**
+   * Real-time streaming response from Google Gemini API with multi-tier fallback resilience.
+   */
+  async *streamText(params: StreamTextParams): AsyncGenerator<AIStreamChunk, void, unknown> {
+    const apiKey = this.requireApiKey();
+    const candidateModels = this.resolveCandidateModels(params.model);
+    const messages = this.normalizeMessages(params.messages);
+    const startTime = Date.now();
+
+    aiLogger.info("ai_gateway_stream_text_start", { provider: this.id, models: candidateModels });
+
+    if (params.simulateError) {
+      yield { type: "status", statusMessage: "Thinking..." };
       throw new AIProviderError({
-        type: "network_error",
-        message: `Unable to connect to Google Gemini API: ${err instanceof Error ? err.message : String(err)}`,
-        statusCode: 503,
+        type: "rate_limit",
+        message: "Simulated Rate Limit (429) from Gemini Gateway.",
         providerName: this.id,
-        rawError: err,
+        statusCode: 429,
       });
     }
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      this.handleGeminiError(errText, response.status, "Gemini streaming request failed");
+    yield { type: "status", statusMessage: "Thinking..." };
+
+    const rawSystemMessage = messages.find((m) => m.role === "system")?.content;
+    const identityInstruction = `You are My AI, an intelligent, fast, reasoning, multimodal, and helpful AI assistant created and developed by Komirishetty Sai Vardhan.
+Your name is My AI. You were created and developed solely by Komirishetty Sai Vardhan. Never say you are Gemini or developed by Google. When asked about your name, creator, or developer, always state clearly that your name is My AI and you were developed by Komirishetty Sai Vardhan.
+
+CAPABILITIES:
+1. IMAGE GENERATION:
+When the user asks to generate, create, draw, paint, visualize, or prepare an image:
+- Formulate a vivid, detailed visual prompt describing the scene, lighting, perspective, and atmosphere.
+- Embed the generated image directly in your markdown response using:
+  ![Detailed Image Description](https://image.pollinations.ai/prompt/<URL_ENCODED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
+  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces).
+- Provide a brief description of the artwork composition.
+
+2. DOCUMENT & PDF PREPARATION:
+When the user asks to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
+- Structure the response as a complete, publication-ready Markdown document with clean hierarchical headings (# Title, ## Sections, ### Subsections), executive summaries, structured key takeaways, formatted data tables, and metadata.
+- Remind the user that they can export, print, or download the document as a PDF, Word (.doc), or Markdown file using the 'Export PDF' / 'Download' buttons directly below the message.`;
+    const systemMessage = rawSystemMessage
+      ? `${identityInstruction}\n\n${rawSystemMessage}`
+      : identityInstruction;
+
+    const nonSystemMessages = messages.filter((m) => m.role !== "system");
+    const contents = (nonSystemMessages.length > 0 ? nonSystemMessages : messages).map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+    let response: Response | null = null;
+    let lastError: unknown = null;
+
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i];
+      try {
+        const endpoint = `${this.baseUrl}/models/${activeModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: systemMessage }],
+            },
+            contents,
+            generationConfig: {
+              temperature: params.temperature ?? 0.7,
+              maxOutputTokens: params.maxTokens,
+            },
+          }),
+          signal: params.signal,
+        });
+
+        // If 503 High Demand, 404 Model Not Found, or 429 Quota on current model, seamlessly retry next model
+        if (!res.ok && (res.status === 503 || res.status === 404 || res.status === 429) && i < candidateModels.length - 1) {
+          aiLogger.warn("gemini_stream_fallback", {
+            failedModel: activeModel,
+            status: res.status,
+            nextModel: candidateModels[i + 1],
+          });
+          continue;
+        }
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          this.handleGeminiError(errText, res.status, "Gemini streaming request failed");
+        }
+
+        response = res;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (err instanceof AIProviderError && (err.statusCode === 503 || err.statusCode === 404 || err.statusCode === 429) && i < candidateModels.length - 1) {
+          continue;
+        }
+        if (i < candidateModels.length - 1 && !(err instanceof DOMException && err.name === "AbortError")) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!response || !response.ok) {
+      if (lastError instanceof AIProviderError) throw lastError;
+      throw new AIProviderError({
+        type: "server_error",
+        message: "All Gemini model endpoints are temporarily unavailable. Please retry shortly.",
+        statusCode: 503,
+        providerName: this.id,
+        rawError: lastError,
+      });
     }
 
     if (!response.body) {
@@ -361,69 +485,84 @@ export class GoogleAdapter extends BaseAIAdapter {
   }
 
   /**
-   * Multimodal image analysis using Gemini Vision.
+   * Multimodal image analysis using Gemini Vision with fallback.
    */
   async analyzeImage(params: AnalyzeImageParams): Promise<AIAnalysisResponse> {
     const apiKey = this.requireApiKey();
-    const model = params.model || "gemini-2.5-flash";
+    const candidateModels = this.resolveCandidateModels(params.model || "gemini-3.6-flash");
     const dataUrl = this.imageToDataUrl(params.image, params.mimeType);
     const base64Data = dataUrl.replace(/^data:[a-zA-Z0-9/]+;base64,/, "");
 
-    aiLogger.info("ai_gateway_analyze_image", { provider: this.id, model });
+    aiLogger.info("ai_gateway_analyze_image", { provider: this.id, models: candidateModels });
 
-    try {
-      const endpoint = `${this.baseUrl}/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: params.prompt },
-                {
-                  inlineData: {
-                    mimeType: params.mimeType || "image/jpeg",
-                    data: base64Data,
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i];
+      try {
+        const endpoint = `${this.baseUrl}/models/${activeModel}:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: params.prompt },
+                  {
+                    inlineData: {
+                      mimeType: params.mimeType || "image/jpeg",
+                      data: base64Data,
+                    },
                   },
-                },
-              ],
-            },
-          ],
-        }),
-        signal: params.signal,
-      });
+                ],
+              },
+            ],
+          }),
+          signal: params.signal,
+        });
 
-      if (!response.ok) {
-        const err = await response.text().catch(() => "");
-        this.handleGeminiError(err, response.status, "Gemini image analysis failed");
+        if (!response.ok && (response.status === 503 || response.status === 404 || response.status === 429) && i < candidateModels.length - 1) {
+          continue;
+        }
+
+        if (!response.ok) {
+          const err = await response.text().catch(() => "");
+          this.handleGeminiError(err, response.status, "Gemini image analysis failed");
+        }
+
+        const data = await response.json();
+        const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        return {
+          analysis,
+          model: activeModel,
+          provider: this.id,
+          usage: data.usageMetadata
+            ? {
+                promptTokens: data.usageMetadata.promptTokenCount,
+                completionTokens: data.usageMetadata.candidatesTokenCount,
+                totalTokens: data.usageMetadata.totalTokenCount,
+              }
+            : undefined,
+          raw: data,
+        };
+      } catch (err) {
+        if (i < candidateModels.length - 1) continue;
+        if (err instanceof AIProviderError) throw err;
+        throw new AIProviderError({
+          type: "unknown",
+          message: err instanceof Error ? err.message : "Gemini image analysis failed",
+          providerName: this.id,
+          rawError: err,
+        });
       }
-
-      const data = await response.json();
-      const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      return {
-        analysis,
-        model,
-        provider: this.id,
-        usage: data.usageMetadata
-          ? {
-              promptTokens: data.usageMetadata.promptTokenCount,
-              completionTokens: data.usageMetadata.candidatesTokenCount,
-              totalTokens: data.usageMetadata.totalTokenCount,
-            }
-          : undefined,
-        raw: data,
-      };
-    } catch (err) {
-      if (err instanceof AIProviderError) throw err;
-      throw new AIProviderError({
-        type: "unknown",
-        message: err instanceof Error ? err.message : "Gemini image analysis failed",
-        providerName: this.id,
-        rawError: err,
-      });
     }
+
+    throw new AIProviderError({
+      type: "server_error",
+      message: "Gemini image analysis failed across candidate models.",
+      statusCode: 503,
+      providerName: this.id,
+    });
   }
 
   /**
@@ -513,3 +652,4 @@ export class GoogleAdapter extends BaseAIAdapter {
 
 export const googleAdapter = new GoogleAdapter();
 export const geminiAdapter = googleAdapter;
+

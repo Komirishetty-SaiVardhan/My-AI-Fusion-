@@ -177,7 +177,7 @@ export class OllamaAdapter extends BaseAIAdapter {
     aiLogger.info("ollama_stream_text_start", { model, baseUrl, messageCount: messages.length });
 
     if (params.simulateError) {
-      yield { type: "status", statusMessage: "Contacting local Ollama engine..." };
+      yield { type: "status", statusMessage: "Thinking..." };
       throw new AIProviderError({
         type: "rate_limit",
         message: "Simulated error for local AI error recovery verification.",
@@ -186,7 +186,7 @@ export class OllamaAdapter extends BaseAIAdapter {
       });
     }
 
-    yield { type: "status", statusMessage: `Generating response with local ${model}...` };
+    yield { type: "status", statusMessage: "Thinking..." };
 
     let response: Response;
     try {

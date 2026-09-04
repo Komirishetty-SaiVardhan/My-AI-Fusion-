@@ -4,65 +4,66 @@ import React from "react";
 import {
   Sparkles,
   Globe,
-  Scale,
   Brain,
   FileText,
   Code2,
-  BarChart3,
+  Image as ImageIcon,
+  FileDown,
   Zap,
+  BarChart3,
 } from "lucide-react";
 import { useChat } from "@/context/ChatContext";
 
 interface QuickAction {
   icon: React.ElementType;
   title: string;
-  category: "Explain" | "Research" | "Summarize" | "Compare" | "Create" | "Analyze";
+  category: "Image" | "PDF & Docs" | "Research" | "Reasoning" | "Code" | "Charts";
   prompt: string;
   badge: string;
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    icon: Scale,
-    category: "Compare",
-    title: "Laptop Comparison",
-    prompt: "Research the best engineering laptop under ₹70,000 and compare the top 5.",
-    badge: "Auto Research",
+    icon: ImageIcon,
+    category: "Image",
+    title: "Generate AI Image",
+    prompt: "Generate a photorealistic 8K image of a futuristic cybernetic city at sunset with flying cars and glowing neon reflections.",
+    badge: "AI Image",
+  },
+  {
+    icon: FileDown,
+    category: "PDF & Docs",
+    title: "Create PDF Report",
+    prompt: "Create a comprehensive executive project proposal document for a cloud AI migration and prepare it for PDF export with structured sections and budget tables.",
+    badge: "PDF Export",
   },
   {
     icon: Globe,
     category: "Research",
-    title: "Next.js 16 Server Actions",
-    prompt: "Research the latest architectural patterns for Next.js 16 App Router and server actions.",
-    badge: "Web Search",
+    title: "Deep Web Research",
+    prompt: "Research the latest architectural breakthroughs in AI agents and Next.js 16 App Router and synthesize a detailed summary.",
+    badge: "Web Research",
   },
   {
     icon: Brain,
-    category: "Explain",
-    title: "Distributed Consensus",
-    prompt: "Explain how Raft consensus algorithm handles leader election step-by-step.",
+    category: "Reasoning",
+    title: "System Reasoning",
+    prompt: "Explain how distributed consensus algorithms like Raft handle split-brain scenarios and leader election step-by-step.",
     badge: "Deep Reasoning",
   },
   {
     icon: Code2,
-    category: "Create",
-    title: "React 19 Custom Hook",
-    prompt: "Write a high-performance TypeScript hook with generics, error boundaries, and debounce.",
+    category: "Code",
+    title: "TypeScript Architecture",
+    prompt: "Write a high-performance TypeScript hook with generic types, debounce logic, error boundaries, and abort signals.",
     badge: "Coding",
   },
   {
     icon: BarChart3,
-    category: "Analyze",
-    title: "System Architecture",
-    prompt: "Analyze the trade-offs between LSM-Trees and B-Trees for write-heavy vector workloads.",
-    badge: "Analysis",
-  },
-  {
-    icon: FileText,
-    category: "Summarize",
-    title: "Security & OWASP Top 10",
-    prompt: "Summarize modern mitigation strategies for Prompt Injection and SSRF in AI applications.",
-    badge: "Summary",
+    category: "Charts",
+    title: "Interactive Data Chart",
+    prompt: "Generate an interactive data comparison chart of the top 5 cloud AI platforms by performance and market adoption with an embedded ```chart JSON block.",
+    badge: "Chart Visualizer",
   },
 ];
 
@@ -70,7 +71,7 @@ export function EmptyState() {
   const { sendMessage } = useChat();
 
   const handleSelectPrompt = (item: QuickAction) => {
-    sendMessage(item.prompt, { mode: "fast" });
+    sendMessage(item.prompt, { mode: "auto" });
   };
 
   return (
@@ -81,18 +82,18 @@ export function EmptyState() {
       </div>
 
       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)] mb-2">
-        What can I help you with?
+        What can I create for you today?
       </h1>
       <p className="text-sm text-[var(--muted-foreground)] max-w-lg mb-6 leading-relaxed">
         <span className="inline-flex items-center gap-1 font-semibold text-sky-500">
-          <Zap className="w-3.5 h-3.5" /> Auto Mode
+          <Zap className="w-3.5 h-3.5" /> My AI
         </span>{" "}
-        intelligently orchestrates web research, deep reasoning, tools, and code synthesis with zero manual configuration.
+        seamlessly generates photorealistic AI images, prepares publication-ready PDF documents, conducts deep web research, and writes production code.
       </p>
 
       {/* Quick Action Category Chips */}
       <div className="flex flex-wrap items-center justify-center gap-2 mb-6 max-w-xl">
-        {(["Explain", "Research", "Summarize", "Compare", "Create", "Analyze"] as const).map(
+        {(["Image", "PDF & Docs", "Research", "Reasoning", "Code", "Charts"] as const).map(
           (category) => {
             const action = QUICK_ACTIONS.find((a) => a.category === category);
             return (

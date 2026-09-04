@@ -8,6 +8,8 @@ import { permissionManager, PermissionManager } from "./permissions";
 import { calculatorTool } from "./tools/calculator";
 import { webSearchTool } from "./tools/web-search";
 import { fileSearchTool } from "./tools/file-search";
+import { imageGeneratorTool } from "./tools/image-generator";
+import { documentGeneratorTool } from "./tools/document-generator";
 import { aiLogger } from "../ai/logger";
 
 export class ToolExecutor {
@@ -27,6 +29,12 @@ export class ToolExecutor {
     }
     if (!this.registry.getTool("file_search")) {
       this.registry.registerTool(fileSearchTool);
+    }
+    if (!this.registry.getTool("image_generator")) {
+      this.registry.registerTool(imageGeneratorTool);
+    }
+    if (!this.registry.getTool("document_generator")) {
+      this.registry.registerTool(documentGeneratorTool);
     }
   }
 

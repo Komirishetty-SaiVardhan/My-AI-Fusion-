@@ -25,6 +25,7 @@
     "test:gateway": "tsx -e \"import('./src/lib/ai/__tests__/gateway.test.ts').then(m => m.runGatewayTestSuite())\""
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.1",
     "@google/genai": "^2.19.0",
     "@prisma/client": "^7.10.0",
     "bcryptjs": "^3.0.3",

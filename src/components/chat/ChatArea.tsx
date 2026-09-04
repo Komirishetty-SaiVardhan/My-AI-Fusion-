@@ -12,6 +12,7 @@ import { useChat } from "@/context/ChatContext";
 import { ChatMessage } from "./ChatMessage";
 import { MessageComposer } from "./MessageComposer";
 import { EmptyState } from "./EmptyState";
+import { ModelSelector } from "./ModelSelector";
 
 interface ChatAreaProps {
   onToggleSidebar?: () => void;
@@ -92,6 +93,8 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-1.5">
+          <ModelSelector />
+
           <button
             onClick={() => createNewConversation()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--muted)] text-[var(--foreground)] hover:bg-sky-500 hover:text-white transition-all cursor-pointer shadow-sm"
