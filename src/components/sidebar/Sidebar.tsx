@@ -12,6 +12,9 @@ import {
   Sliders,
   FileJson,
   Pin,
+  Brain,
+  Radio,
+  Layers,
 } from "lucide-react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useChat } from "@/context/ChatContext";
@@ -20,6 +23,11 @@ import { ConversationSearch } from "./ConversationSearch";
 import { ConversationItem } from "./ConversationItem";
 import { ExportBackupModal } from "./ExportBackupModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
+import { MemoryHubModal } from "@/components/memory/MemoryHubModal";
+import { VoiceCallModal } from "@/components/voice/VoiceCallModal";
+import { ProjectWorkspaceModal } from "@/components/workspace/ProjectWorkspaceModal";
+import { SAMPLE_PROJECT_WORKSPACE } from "@/lib/workspace/engine";
+import { WorkspaceSelector } from "@/components/workspaces/WorkspaceSelector";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -52,6 +60,9 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
 
   const userDisplayName =
     user?.fullName ||
@@ -165,6 +176,11 @@ export function Sidebar({
         </button>
       </div>
 
+      {/* Workspace Selector */}
+      <div className="px-3 py-1">
+        <WorkspaceSelector isCollapsed={isCollapsedDesktop} />
+      </div>
+
       {/* Search Bar */}
       <ConversationSearch
         value={searchQuery}
@@ -235,25 +251,54 @@ export function Sidebar({
 
       {/* Footer Section */}
       <div className="p-3 border-t border-[var(--sidebar-border)] space-y-2">
-        {/* Quick Tools Bar (Backup & Settings) */}
+        {/* Quick Tools Bar (Voice Call, Workspace, Memory Hub, Backup & Settings) */}
         {!isCollapsedDesktop && (
-          <div className="flex items-center justify-between gap-1 text-xs">
-            <button
-              onClick={() => setIsBackupModalOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-[var(--foreground)] text-[11px] font-medium transition-colors cursor-pointer"
-              title="Backup / Restore chat archive"
-            >
-              <FileJson className="w-3.5 h-3.5 text-sky-500" />
-              <span>Backup</span>
-            </button>
-            <button
-              onClick={() => setIsSettingsModalOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-[var(--foreground)] text-[11px] font-medium transition-colors cursor-pointer"
-              title="AI Assistant Settings"
-            >
-              <Sliders className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Settings</span>
-            </button>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-1 text-xs">
+              <button
+                onClick={() => setIsVoiceCallOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 text-[11px] font-medium transition-colors cursor-pointer"
+                title="Real-Time Conversational Voice Call Mode"
+              >
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Voice Call</span>
+              </button>
+              <button
+                onClick={() => setIsWorkspaceOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-blue-500/30 bg-blue-950/20 hover:bg-blue-900/30 text-blue-300 text-[11px] font-medium transition-colors cursor-pointer"
+                title="Interactive Multi-File Project Workspace"
+              >
+                <Layers className="w-3.5 h-3.5 text-blue-400" />
+                <span>Workspace</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-1 text-xs">
+              <button
+                onClick={() => setIsMemoryModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-[var(--foreground)] text-[11px] font-medium transition-colors cursor-pointer"
+                title="Personal Memory & Knowledge Hub"
+              >
+                <Brain className="w-3.5 h-3.5 text-purple-500" />
+                <span>Memory</span>
+              </button>
+              <button
+                onClick={() => setIsBackupModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-[var(--foreground)] text-[11px] font-medium transition-colors cursor-pointer"
+                title="Backup / Restore chat archive"
+              >
+                <FileJson className="w-3.5 h-3.5 text-sky-500" />
+                <span>Backup</span>
+              </button>
+              <button
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] text-[var(--foreground)] text-[11px] font-medium transition-colors cursor-pointer"
+                title="AI Assistant Settings"
+              >
+                <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Settings</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -327,6 +372,25 @@ export function Sidebar({
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      {/* Memory Hub Modal */}
+      <MemoryHubModal
+        isOpen={isMemoryModalOpen}
+        onClose={() => setIsMemoryModalOpen(false)}
+      />
+
+      {/* Real-Time Voice Call Modal */}
+      <VoiceCallModal
+        isOpen={isVoiceCallOpen}
+        onClose={() => setIsVoiceCallOpen(false)}
+      />
+
+      {/* Project Workspace Modal */}
+      <ProjectWorkspaceModal
+        isOpen={isWorkspaceOpen}
+        onClose={() => setIsWorkspaceOpen(false)}
+        data={SAMPLE_PROJECT_WORKSPACE}
       />
     </div>
   );

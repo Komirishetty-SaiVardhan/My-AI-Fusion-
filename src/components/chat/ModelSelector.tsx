@@ -84,9 +84,9 @@ export function ModelSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-1.5 w-72 rounded-2xl border border-[var(--border)] bg-[var(--popover)] text-[var(--popover-foreground)] shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-          <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[var(--border)] mb-1">
-            <span className="text-[10px] font-semibold tracking-wider text-[var(--muted-foreground)] uppercase">
+        <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-1.5 w-72 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10">
+          <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 mb-1">
+            <span className="text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
               Select My AI Version
             </span>
             <span className="text-[9px] text-sky-500 font-medium">By Sai Vardhan</span>

@@ -8,7 +8,9 @@ import {
   AIAnalysisResponse,
   EmbedTextParams,
   AIEmbeddingResponse,
+  AIMessage,
 } from "../../types";
+import { ChatAttachment } from "@/types/chat";
 import { BaseAIAdapter } from "../base-adapter";
 import { AIProviderError } from "../../errors";
 import { aiLogger } from "../../logger";
@@ -205,17 +207,31 @@ export class GoogleAdapter extends BaseAIAdapter {
     const identityInstruction = `You are My AI, an intelligent, fast, reasoning, multimodal, and helpful AI assistant created and developed by Komirishetty Sai Vardhan.
 Your name is My AI. You were created and developed solely by Komirishetty Sai Vardhan. Never say you are Gemini or developed by Google. When asked about your name, creator, or developer, always state clearly that your name is My AI and you were developed by Komirishetty Sai Vardhan.
 
-CAPABILITIES:
-1. IMAGE GENERATION:
-When the user asks to generate, create, draw, paint, visualize, or prepare an image:
-- Formulate a vivid, detailed visual prompt describing the scene, lighting, perspective, and atmosphere.
-- Embed the generated image directly in your markdown response using:
-  ![Detailed Image Description](https://image.pollinations.ai/prompt/<URL_ENCODED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
-  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces).
-- Provide a brief description of the artwork composition.
+CORE CAPABILITIES & RESPONSE FORMATTING:
 
-2. DOCUMENT & PDF PREPARATION:
-When the user asks to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
+1. HANDWRITTEN NOTES, LETTERS & ASSIGNMENTS:
+When the user asks you to write, generate, or prepare handwritten notes, handwritten letters, essays, assignments, cursive writing, calligraphy, or text written in handwriting:
+- Output an interactive \`\`\`handwritten\`\`\` code block that renders with 100% deterministic spelling, punctuation, and multi-page formatting fidelity.
+- Format the block with optional metadata headers followed by the EXACT verbatim text:
+\`\`\`handwritten
+Title: [Optional Title]
+Paper: [lined | legal-pad | blank | grid | parchment | chalkboard]
+Ink: [blue | black | royal-blue | gel-black | red | emerald | pencil | white]
+Font: [caveat | kalam | patrick | architects | apple | dancing | indie | shadows]
+---
+[Your exact text or user-requested text here with natural paragraphs and line breaks]
+\`\`\`
+- Preserve every single word, spelling, punctuation, and paragraph break. The user will be able to customize paper textures, switch handwriting fonts, copy the image, and download high-resolution PNG/SVG files.
+
+2. ARTISTIC & PHOTOREALISTIC IMAGE GENERATION:
+When the user asks you to generate, create, draw, paint, visualize, or prepare visual artwork, photos, scenery, 3D renders, anime art, or illustrations (non-handwritten text):
+- Formulate a vivid, highly detailed visual prompt describing the scene, lighting, perspective, colors, and art medium.
+- Embed the generated image directly in your markdown response using:
+  ![Artwork Description](https://image.pollinations.ai/prompt/<URL_ENCODED_DETAILED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
+  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces and special characters).
+
+3. DOCUMENT & PDF PREPARATION:
+When the user asks you to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
 - Structure the response as a complete, publication-ready Markdown document with clean hierarchical headings (# Title, ## Sections, ### Subsections), executive summaries, structured key takeaways, formatted data tables, and metadata.
 - Remind the user that they can export, print, or download the document as a PDF, Word (.doc), or Markdown file using the 'Export PDF' / 'Download' buttons directly below the message.`;
     const systemMessage = rawSystemMessage
@@ -223,10 +239,10 @@ When the user asks to generate, prepare, create, or export a PDF, report, contra
       : identityInstruction;
 
     const nonSystemMessages = messages.filter((m) => m.role !== "system");
-    const contents = (nonSystemMessages.length > 0 ? nonSystemMessages : messages).map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const contents = this.buildGeminiContents(
+      nonSystemMessages.length > 0 ? nonSystemMessages : messages,
+      params.attachments
+    );
 
     let lastError: unknown = null;
 
@@ -311,6 +327,85 @@ When the user asks to generate, prepare, create, or export a PDF, report, contra
   }
 
   /**
+   * Constructs native Google Gemini multimodal contents parts supporting images, videos, audio, documents and text.
+   */
+  private buildGeminiContents(
+    messages: AIMessage[],
+    topLevelAttachments?: ChatAttachment[]
+  ): Array<{ role: "user" | "model"; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> {
+    const nonSystemMessages = messages.filter((m) => m.role !== "system");
+    const targetMessages = nonSystemMessages.length > 0 ? nonSystemMessages : messages;
+
+    const userIndices = targetMessages
+      .map((m, i) => (m.role === "user" ? i : -1))
+      .filter((i) => i !== -1);
+    const lastUserIndex =
+      userIndices.length > 0 ? userIndices[userIndices.length - 1] : targetMessages.length - 1;
+
+    return targetMessages.map((m, index) => {
+      const role: "user" | "model" = m.role === "assistant" ? "model" : "user";
+      const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+      const messageAttachments = [
+        ...(m.attachments || []),
+        ...(index === lastUserIndex && topLevelAttachments ? topLevelAttachments : []),
+      ];
+
+      const seenKeys = new Set<string>();
+      for (const att of messageAttachments) {
+        const key = att.id || att.url || att.name;
+        if (key && seenKeys.has(key)) continue;
+        if (key) seenKeys.add(key);
+
+        if (att.url && att.url.startsWith("data:")) {
+          const match = att.url.match(/^data:([^;]+);base64,(.*)$/);
+          if (match) {
+            const mimeType = att.mimeType || match[1];
+            const base64Data = match[2];
+            parts.push({
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            });
+          }
+        } else if (att.url && att.url.length > 50 && !att.url.startsWith("http")) {
+          // Raw base64 payload
+          const defaultMime =
+            att.type === "video"
+              ? "video/mp4"
+              : att.type === "audio"
+              ? "audio/mp3"
+              : att.type === "file"
+              ? "application/pdf"
+              : "image/jpeg";
+
+          parts.push({
+            inlineData: {
+              mimeType: att.mimeType || defaultMime,
+              data: att.url,
+            },
+          });
+        }
+
+        if (att.extractedText) {
+          parts.push({
+            text: `[Attached File / Document: ${att.name || "File"}]\n${att.extractedText}`,
+          });
+        }
+      }
+
+      if (m.content) {
+        parts.push({ text: m.content });
+      } else if (parts.length === 0) {
+        parts.push({ text: " " });
+      }
+
+      return { role, parts };
+    });
+  }
+
+  /**
    * Real-time streaming response from Google Gemini API with multi-tier fallback resilience.
    */
   async *streamText(params: StreamTextParams): AsyncGenerator<AIStreamChunk, void, unknown> {
@@ -337,17 +432,31 @@ When the user asks to generate, prepare, create, or export a PDF, report, contra
     const identityInstruction = `You are My AI, an intelligent, fast, reasoning, multimodal, and helpful AI assistant created and developed by Komirishetty Sai Vardhan.
 Your name is My AI. You were created and developed solely by Komirishetty Sai Vardhan. Never say you are Gemini or developed by Google. When asked about your name, creator, or developer, always state clearly that your name is My AI and you were developed by Komirishetty Sai Vardhan.
 
-CAPABILITIES:
-1. IMAGE GENERATION:
-When the user asks to generate, create, draw, paint, visualize, or prepare an image:
-- Formulate a vivid, detailed visual prompt describing the scene, lighting, perspective, and atmosphere.
-- Embed the generated image directly in your markdown response using:
-  ![Detailed Image Description](https://image.pollinations.ai/prompt/<URL_ENCODED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
-  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces).
-- Provide a brief description of the artwork composition.
+CORE CAPABILITIES & RESPONSE FORMATTING:
 
-2. DOCUMENT & PDF PREPARATION:
-When the user asks to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
+1. HANDWRITTEN NOTES, LETTERS & ASSIGNMENTS:
+When the user asks you to write, generate, or prepare handwritten notes, handwritten letters, essays, assignments, cursive writing, calligraphy, or text written in handwriting:
+- Output an interactive \`\`\`handwritten\`\`\` code block that renders with 100% deterministic spelling, punctuation, and multi-page formatting fidelity.
+- Format the block with optional metadata headers followed by the EXACT verbatim text:
+\`\`\`handwritten
+Title: [Optional Title]
+Paper: [lined | legal-pad | blank | grid | parchment | chalkboard]
+Ink: [blue | black | royal-blue | gel-black | red | emerald | pencil | white]
+Font: [caveat | kalam | patrick | architects | apple | dancing | indie | shadows]
+---
+[Your exact text or user-requested text here with natural paragraphs and line breaks]
+\`\`\`
+- Preserve every single word, spelling, punctuation, and paragraph break. The user will be able to customize paper textures, switch handwriting fonts, copy the image, and download high-resolution PNG/SVG files.
+
+2. ARTISTIC & PHOTOREALISTIC IMAGE GENERATION:
+When the user asks you to generate, create, draw, paint, visualize, or prepare visual artwork, photos, scenery, 3D renders, anime art, or illustrations (non-handwritten text):
+- Formulate a vivid, highly detailed visual prompt describing the scene, lighting, perspective, colors, and art medium.
+- Embed the generated image directly in your markdown response using:
+  ![Artwork Description](https://image.pollinations.ai/prompt/<URL_ENCODED_DETAILED_PROMPT>?width=1024&height=1024&model=flux&nologo=true&enhance=true)
+  (Ensure the prompt inside the URL is properly URI-encoded with %20 for spaces and special characters).
+
+3. DOCUMENT & PDF PREPARATION:
+When the user asks you to generate, prepare, create, or export a PDF, report, contract, invoice, resume, proposal, or structured document:
 - Structure the response as a complete, publication-ready Markdown document with clean hierarchical headings (# Title, ## Sections, ### Subsections), executive summaries, structured key takeaways, formatted data tables, and metadata.
 - Remind the user that they can export, print, or download the document as a PDF, Word (.doc), or Markdown file using the 'Export PDF' / 'Download' buttons directly below the message.`;
     const systemMessage = rawSystemMessage
@@ -355,10 +464,10 @@ When the user asks to generate, prepare, create, or export a PDF, report, contra
       : identityInstruction;
 
     const nonSystemMessages = messages.filter((m) => m.role !== "system");
-    const contents = (nonSystemMessages.length > 0 ? nonSystemMessages : messages).map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const contents = this.buildGeminiContents(
+      nonSystemMessages.length > 0 ? nonSystemMessages : messages,
+      params.attachments
+    );
 
     let response: Response | null = null;
     let lastError: unknown = null;
@@ -457,9 +566,20 @@ When the user asks to generate, prepare, create, or export a PDF, report, contra
           const jsonStr = trimmed.replace(/^data:\s*/, "");
           try {
             const parsed = JSON.parse(jsonStr);
-            const textDelta = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (textDelta) {
-              yield { type: "text", content: textDelta };
+            const parts = parsed.candidates?.[0]?.content?.parts;
+            if (Array.isArray(parts)) {
+              for (const part of parts) {
+                if (part.thought && part.text) {
+                  yield { type: "reasoning", content: part.text };
+                } else if (part.text) {
+                  yield { type: "text", content: part.text };
+                }
+              }
+            } else {
+              const textDelta = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textDelta) {
+                yield { type: "text", content: textDelta };
+              }
             }
           } catch {
             // Partial chunk

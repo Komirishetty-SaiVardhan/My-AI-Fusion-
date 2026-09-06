@@ -10,10 +10,14 @@ export type TaskCategory =
   | "FILE_ANALYSIS";
 
 export interface RequestAttachment {
-  type: "image" | "file";
+  type: "image" | "video" | "audio" | "file";
   filename?: string;
+  name?: string;
+  url?: string;
   mimeType?: string;
   sizeBytes?: number;
+  data?: string;
+  extractedText?: string;
 }
 
 export interface RouterRequest {

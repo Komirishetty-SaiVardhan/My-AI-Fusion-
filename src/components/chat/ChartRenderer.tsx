@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import { BarChart3, Download, PieChart, LineChart, Table } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ const DEFAULT_COLORS = [
   "#f97316", // Orange
 ];
 
-export function ChartRenderer({ chartData }: ChartRendererProps) {
+function ChartRendererComponent({ chartData }: ChartRendererProps) {
   const [chartType, setChartType] = useState<"bar" | "line" | "pie" | "area">(
     chartData.type || "bar"
   );
@@ -329,6 +329,8 @@ export function ChartRenderer({ chartData }: ChartRendererProps) {
   );
 }
 
+export const ChartRenderer = memo(ChartRendererComponent);
+
 /**
  * Helper to test if a markdown code block contains chart JSON
  */
@@ -345,3 +347,4 @@ export function parseChartCodeBlock(code: string): ChartConfig | null {
     return null;
   }
 }
+

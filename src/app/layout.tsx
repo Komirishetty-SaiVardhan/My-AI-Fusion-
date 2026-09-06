@@ -35,6 +35,14 @@ export default function RootLayout({
       }}
     >
       <html lang="en" suppressHydrationWarning className="h-full">
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;600;700&family=Dancing+Script:wght@400;600;700&family=Homemade+Apple&family=Indie+Flower&family=Kalam:wght@300;400;700&family=Patrick+Hand&family=Shadows+Into+Light&display=swap"
+            rel="stylesheet"
+          />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} h-full antialiased selection:bg-sky-500/20 selection:text-sky-500`}
         >

@@ -3,7 +3,16 @@ import { ITool, ToolCallContext, ToolInputSchema, ToolPermission } from "../type
 export interface ImageGeneratorInput {
   prompt: string;
   aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:2";
-  style?: "photorealistic" | "cinematic" | "digital-art" | "anime" | "3d-render" | "cyberpunk" | "fantasy";
+  style?:
+    | "photorealistic"
+    | "cinematic"
+    | "digital-art"
+    | "anime"
+    | "3d-render"
+    | "cyberpunk"
+    | "fantasy"
+    | "handwritten"
+    | "calligraphy";
   enhance?: boolean;
 }
 
@@ -22,7 +31,7 @@ export interface ImageGeneratorOutput {
 export class ImageGeneratorTool implements ITool<ImageGeneratorInput, ImageGeneratorOutput> {
   readonly name = "image_generator";
   readonly description =
-    "Generates high-resolution, photorealistic, or artistic AI images from text prompts with customizable aspect ratios and styles.";
+    "Generates high-resolution, photorealistic, artistic, or handwritten AI images from text prompts with customizable aspect ratios and styles.";
 
   readonly inputSchema: ToolInputSchema = {
     type: "object",
@@ -39,7 +48,7 @@ export class ImageGeneratorTool implements ITool<ImageGeneratorInput, ImageGener
       },
       style: {
         type: "string",
-        description: "Visual style: 'photorealistic', 'cinematic', 'digital-art', 'anime', '3d-render', 'cyberpunk', or 'fantasy'.",
+        description: "Visual style: 'photorealistic', 'cinematic', 'digital-art', 'anime', '3d-render', 'cyberpunk', 'fantasy', 'handwritten', or 'calligraphy'.",
         required: false,
       },
       enhance: {
@@ -108,7 +117,29 @@ export class ImageGeneratorTool implements ITool<ImageGeneratorInput, ImageGener
     const ratio = input.aspectRatio || "1:1";
     const dimensions = ratioMap[ratio] || { width: 1024, height: 1024 };
 
-    // Build enhanced prompt
+    // If style is handwritten or calligraphy, use the deterministic handwriting engine
+    if (input.style === "handwritten" || input.style === "calligraphy") {
+      const paper = input.style === "calligraphy" ? "parchment" : "lined";
+      const font = input.style === "calligraphy" ? "dancing" : "caveat";
+      const ink = input.style === "calligraphy" ? "royal-blue" : "blue";
+      const imageUrl = `/api/handwriting?text=${encodeURIComponent(input.prompt)}&paper=${paper}&ink=${ink}&font=${font}`;
+      const downloadUrl = imageUrl;
+      const markdownImage = `\`\`\`handwritten\nPaper: ${paper}\nInk: ${ink}\nFont: ${font}\n---\n${input.prompt}\n\`\`\``;
+
+      return {
+        imageUrl,
+        prompt: input.prompt,
+        enhancedPrompt: input.prompt,
+        aspectRatio: ratio,
+        width: 800,
+        height: 1050,
+        style: input.style,
+        markdownImage,
+        downloadUrl,
+      };
+    }
+
+    // Build enhanced prompt for general artistic / photorealistic images
     let enhanced = input.prompt;
     if (input.style) {
       const styleKeywords: Record<string, string> = {

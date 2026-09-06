@@ -1,10 +1,13 @@
 export * from "./errors";
 export type MessageRole = "user" | "assistant" | "system";
 
+import { ChatAttachment } from "@/types/chat";
+
 export interface AIMessage {
   role: MessageRole;
   content: string;
   name?: string;
+  attachments?: ChatAttachment[];
 }
 
 // Alias for legacy Chat compatibility
@@ -30,6 +33,7 @@ export interface GatewayRequestOptions {
 export interface GenerateTextParams extends GatewayRequestOptions {
   messages: AIMessage[] | string;
   mode?: "auto" | "fast" | "reasoning" | "research";
+  attachments?: ChatAttachment[];
 }
 
 export interface AITextResponse {
@@ -47,6 +51,7 @@ export interface StreamTextParams extends GatewayRequestOptions {
   conversationId?: string;
   messages: AIMessage[] | string;
   mode?: "auto" | "fast" | "reasoning" | "research";
+  attachments?: ChatAttachment[];
 }
 
 export type AIStreamChunkType = "status" | "reasoning" | "text" | "usage" | "done" | "error";

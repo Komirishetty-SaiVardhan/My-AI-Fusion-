@@ -9,10 +9,12 @@ export type MessageStatus =
 
 export interface ChatAttachment {
   id: string;
-  type: "image" | "file";
+  type: "image" | "video" | "audio" | "file";
   name: string;
-  url: string; // Ephemeral data:image/ or blob: url
+  url: string; // Ephemeral data: or blob: url
+  mimeType?: string;
   sizeBytes?: number;
+  extractedText?: string;
 }
 
 import { AutoExecutionDetails } from "@/lib/auto/types";
@@ -72,9 +74,11 @@ export interface ChatRequestPayload {
   messages: Array<{
     role: MessageRole;
     content: string;
+    attachments?: ChatAttachment[];
   }>;
   model?: string;
   mode?: "auto" | "fast" | "reasoning" | "research";
+  temperature?: number;
   attachments?: ChatAttachment[];
   simulateError?: boolean;
 }

@@ -6,6 +6,8 @@
     --foreground: #0f172a;
     --card: #ffffff;
     --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
     --sidebar: #f1f5f9;
     --sidebar-border: #e2e8f0;
     --border: #e2e8f0;
@@ -30,6 +32,8 @@
     --foreground: #f1f5f9;
     --card: #111827;
     --card-foreground: #f1f5f9;
+    --popover: #111827;
+    --popover-foreground: #f1f5f9;
     --sidebar: #0d121f;
     --sidebar-border: #1e293b;
     --border: #1e293b;
@@ -48,6 +52,16 @@
     --code-header: #131b2e;
     --code-border: #1e293b;
   }
+}
+
+select {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--foreground);
 }
 
 body {

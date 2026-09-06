@@ -16,8 +16,23 @@ export class RequestClassifier {
         };
       }
 
+      const hasVideo = request.attachments.some(
+        (a) => a.type === "video" || (a.mimeType && a.mimeType.startsWith("video/"))
+      );
+      if (hasVideo) {
+        return {
+          category: "VISION",
+          confidence: 1.0,
+          reason: "Request contains video attachment",
+          detectedFeatures: ["attachment:video"],
+        };
+      }
+
       const hasFile = request.attachments.some(
-        (a) => a.type === "file" || (a.mimeType && !a.mimeType.startsWith("image/"))
+        (a) =>
+          a.type === "file" ||
+          a.type === "audio" ||
+          (a.mimeType && !a.mimeType.startsWith("image/") && !a.mimeType.startsWith("video/"))
       );
       if (hasFile) {
         return {

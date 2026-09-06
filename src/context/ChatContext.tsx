@@ -187,7 +187,38 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (err) {
-      console.warn("Failed to persist chat history:", err);
+      if (err instanceof Error && (err.name === "QuotaExceededError" || err.message.includes("quota"))) {
+        try {
+          const recentConvs = conversations.slice(0, 15);
+          const trimmedMsgs: Record<string, any[]> = {};
+          recentConvs.forEach((c) => {
+            const msgs = messagesByConversation[c.id] || [];
+            trimmedMsgs[c.id] = msgs.slice(-30).map((m) => ({
+              ...m,
+              attachments: m.attachments?.map((a) => ({
+                ...a,
+                previewUrl: undefined,
+              })),
+            }));
+          });
+          const trimmedPayload = {
+            conversations: recentConvs,
+            messagesByConversation: trimmedMsgs,
+            activeConversationId,
+            pinnedConversations,
+            selectedModel,
+            temperature,
+            customInstructions,
+            userKey,
+            savedAt: Date.now(),
+          };
+          localStorage.setItem(storageKey, JSON.stringify(trimmedPayload));
+        } catch {
+          // Silently ignore if quota is still exhausted
+        }
+      } else {
+        console.warn("Failed to persist chat history:", err);
+      }
     }
   }, [
     conversations,
@@ -279,7 +310,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     async (
       convId: string,
       assistantMessageId: string,
-      conversationMessages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+      conversationMessages: Array<{
+        role: "user" | "assistant" | "system";
+        content: string;
+        attachments?: ChatAttachment[];
+      }>,
       options?: SendMessageOptions
     ) => {
       const controller = new AbortController();
@@ -352,42 +387,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 } else {
                   setActiveStatusMessage(msg);
                 }
-              } else if (event.type === "reasoning-delta" && event.delta) {
+              } else if (event.type === "reasoning-delta") {
                 updateMessage(convId, assistantMessageId, (prev) => ({
                   ...prev,
-                  reasoning: (prev.reasoning || "") + event.delta,
-                  status: "streaming",
+                  reasoning: (prev.reasoning || "") + (event.delta || ""),
                 }));
-              } else if (event.type === "text-delta" && event.delta) {
-                setActiveStatusMessage(null);
+              } else if (event.type === "text-delta") {
                 updateMessage(convId, assistantMessageId, (prev) => ({
                   ...prev,
-                  content: prev.content + event.delta,
+                  content: prev.content + (event.delta || ""),
                   status: "streaming",
                 }));
               } else if (event.type === "error") {
                 updateMessage(convId, assistantMessageId, (prev) => ({
                   ...prev,
                   status: "error",
-                  error: event.error || "An unexpected error occurred",
+                  error: event.error || "Generation error",
                 }));
               } else if (event.type === "done") {
                 updateMessage(convId, assistantMessageId, (prev) => ({
                   ...prev,
-                  status: event.finishReason === "abort" ? "stopped" : "completed",
+                  status: prev.status === "error" ? "error" : "completed",
                 }));
               }
-            } catch (parseErr) {
-              console.error("Failed to parse SSE line:", line, parseErr);
+            } catch {
+              // Ignore malformed JSON chunks
             }
           }
         }
-
-        // Finalize status
-        updateMessage(convId, assistantMessageId, (prev) => ({
-          ...prev,
-          status: prev.status === "error" || prev.status === "stopped" ? prev.status : "completed",
-        }));
       } catch (err: unknown) {
         if (controller.signal.aborted) {
           updateMessage(convId, assistantMessageId, (prev) => ({
@@ -395,7 +422,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             status: "stopped",
           }));
         } else {
-          const msg = err instanceof Error ? err.message : "Failed to connect to assistant service";
+          const msg = err instanceof Error ? err.message : "Connection failure";
           updateMessage(convId, assistantMessageId, (prev) => ({
             ...prev,
             status: "error",
@@ -463,11 +490,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const historyPayload = currentList
         .filter((m) => m.status === "completed" || m.status === "stopped")
         .slice(-12)
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }));
 
       const payload = [
         ...historyPayload,
-        { role: "user" as const, content: trimmed },
+        { role: "user" as const, content: trimmed, attachments: options?.attachments },
       ];
 
       await executeStream(activeConversationId, assistantMsgId, payload, options);
@@ -526,7 +553,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         error: undefined,
       }));
 
-      const payload = userContext.map((m) => ({ role: m.role, content: m.content }));
+      const payload = userContext.map((m) => ({
+        role: m.role,
+        content: m.content,
+        attachments: m.attachments,
+      }));
       await executeStream(activeConversationId, assistantMsgId, payload);
     },
     [activeConversationId, isStreaming, messagesByConversation, executeStream, updateMessage]

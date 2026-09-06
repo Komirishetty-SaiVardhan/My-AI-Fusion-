@@ -56,3 +56,27 @@ export interface MemoryEvaluationResult {
   importance: number;
   rejectedSecret?: boolean;
 }
+
+// User-Facing Memory Hub Schema
+export type MemoryCategory =
+  | "preference"
+  | "project"
+  | "rule"
+  | "fact"
+  | "bio"
+  | "tech-stack";
+
+export interface UserMemoryItem {
+  id: string;
+  category: MemoryCategory;
+  title: string;
+  content: string;
+  createdAt: number;
+  pinned?: boolean;
+  sourceConversationId?: string;
+}
+
+export interface MemoryStoreData {
+  memories: UserMemoryItem[];
+  lastUpdated: number;
+}

@@ -1,3 +1,4 @@
+// Research Engine Types & Pipelines
 export interface Source {
   id: string;
   url: string;
@@ -67,4 +68,44 @@ export interface ResearchResult {
   citations: Citation[];
   formattedFootnotes: string;
   durationMs: number;
+}
+
+// Deep Autonomous Research Report & Visualizer Types
+export type ResearchStage =
+  | "planning"
+  | "searching"
+  | "verifying"
+  | "synthesizing"
+  | "completed";
+
+export interface ResearchSource {
+  id: string;
+  title: string;
+  url: string;
+  snippet: string;
+  authorOrDomain?: string;
+  reliabilityScore?: number; // 0 to 100
+}
+
+export interface ResearchStep {
+  id: string;
+  query: string;
+  stage: ResearchStage;
+  status: "pending" | "running" | "completed";
+  findingsSummary: string;
+  sourcesCount: number;
+}
+
+export interface DeepResearchReport {
+  id: string;
+  query: string;
+  topic: string;
+  abstract: string;
+  steps: ResearchStep[];
+  sources: ResearchSource[];
+  contentMarkdown: string;
+  keyFindings: string[];
+  openQuestions: string[];
+  totalSourcesConsulted: number;
+  confidenceScore: number;
 }

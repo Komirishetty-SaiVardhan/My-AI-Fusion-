@@ -13,6 +13,8 @@ import { ChatMessage } from "./ChatMessage";
 import { MessageComposer } from "./MessageComposer";
 import { EmptyState } from "./EmptyState";
 import { ModelSelector } from "./ModelSelector";
+import { PersonaSelector } from "@/components/personas/PersonaSelector";
+import { AI_PERSONA_PRESETS, AIPersona } from "@/lib/personas/presets";
 
 interface ChatAreaProps {
   onToggleSidebar?: () => void;
@@ -26,7 +28,15 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
     createNewConversation,
     clearConversation,
     isStreaming,
+    setCustomInstructions,
   } = useChat();
+
+  const [selectedPersona, setSelectedPersona] = useState<AIPersona>(AI_PERSONA_PRESETS[0]);
+
+  const handleSelectPersona = (persona: AIPersona) => {
+    setSelectedPersona(persona);
+    setCustomInstructions(persona.systemPromptModifier);
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -42,12 +52,39 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    const isUp = distanceFromBottom > 120;
-    setShowScrollBottom(isUp);
+    const isUp = distanceFromBottom > 80;
     userScrolledUpRef.current = isUp;
+    setShowScrollBottom((prev) => (prev !== isUp ? isUp : prev));
   }, []);
 
-  const scrollToBottom = useCallback((smooth = true) => {
+  // Listen to active user gestures (wheel/touch) to immediately lock manual scroll
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        userScrolledUpRef.current = true;
+      }
+    };
+
+    const handleTouchStart = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollHeight - scrollTop - clientHeight > 80) {
+        userScrolledUpRef.current = true;
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: true });
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = false) => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: smooth ? "smooth" : "auto",
@@ -69,7 +106,7 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
     <main className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--background)] relative">
       {/* Top Header Bar */}
       <header className="flex-shrink-0 flex items-center justify-between h-14 px-4 sm:px-6 border-b border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-md z-10 select-none">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Mobile Sidebar Toggle */}
           <button
             onClick={onToggleSidebar}
@@ -82,33 +119,39 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
 
           {/* Conversation Title & Badge */}
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="font-semibold text-sm sm:text-base text-[var(--foreground)] truncate">
+            <h1 className="font-semibold text-xs sm:text-sm text-[var(--foreground)] truncate max-w-[120px] sm:max-w-[200px]">
               {activeConversation?.title || "My AI Chat"}
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 font-medium">
-              <Sparkles className="w-3 h-3" /> My AI Pro
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 font-medium">
+              <Sparkles className="w-3 h-3" /> Pro
             </span>
           </div>
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* AI Persona Selector */}
+          <PersonaSelector
+            selectedPersona={selectedPersona}
+            onSelectPersona={handleSelectPersona}
+          />
+
+          {/* Model Selector */}
           <ModelSelector />
 
           <button
             onClick={() => createNewConversation()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--muted)] text-[var(--foreground)] hover:bg-sky-500 hover:text-white transition-all cursor-pointer shadow-sm"
-            title="Start a new chat"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[var(--muted)] text-[var(--foreground)] hover:bg-sky-500 hover:text-white transition-all cursor-pointer shadow-sm"
+            title="Start new conversation"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New Chat</span>
+            <span className="hidden sm:inline">New</span>
           </button>
-
           {messages.length > 0 && (
             <button
               onClick={clearConversation}
               disabled={isStreaming}
-              className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
+              className="p-1.5 rounded-xl text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
               title="Clear messages in this chat"
               aria-label="Clear chat"
             >
@@ -118,11 +161,11 @@ export function ChatArea({ onToggleSidebar }: ChatAreaProps) {
         </div>
       </header>
 
-      {/* Main Messages Scroll Container */}
+      {/* Main Messages Scroll Container with Scroll Anchoring */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto flex flex-col relative"
+        className="flex-1 overflow-y-auto flex flex-col relative overscroll-y-contain [overflow-anchor:auto]"
       >
         {messages.length === 0 ? (
           <EmptyState />

@@ -16,7 +16,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { conversationId, messages, model, mode, simulateError } = body as Partial<ChatRequestPayload>;
+    const {
+      conversationId,
+      messages,
+      model,
+      mode,
+      temperature,
+      attachments,
+      simulateError,
+    } = body as Partial<ChatRequestPayload>;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages array must not be empty" }), {
@@ -30,9 +38,12 @@ export async function POST(req: NextRequest) {
       messages: messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : m.role === "system" ? "system" : "user",
         content: String(m.content || ""),
+        attachments: Array.isArray(m.attachments) ? m.attachments : undefined,
       })),
       model,
       mode,
+      temperature: typeof temperature === "number" ? temperature : undefined,
+      attachments: Array.isArray(attachments) ? attachments : undefined,
       simulateError: Boolean(simulateError),
     };
 

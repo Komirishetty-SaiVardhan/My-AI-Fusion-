@@ -1,292 +1,149 @@
 # 🚀 My AI Fusion
 
-> **An advanced, all-in-one AI platform for intelligent conversations, reasoning, image generation, document creation, data visualization, and AI-powered productivity.**
-
-My AI Fusion is a full-stack AI application that brings multiple AI capabilities together in one modern, unified workspace.
-
-The platform is designed with a focus on **AI integration, reliability, performance, extensibility, and user experience**.
+> **An advanced, all-in-one AI platform for human-like conversational intelligence, autonomous agents, infinite diagram whiteboards, in-browser Python data science, multi-agent debates, interactive multi-file project workspaces, and high-performance productivity.**
+> 
+> **Solely Created & Developed by [Komirishetty Sai Vardhan](https://github.com/Komirishetty-SaiVardhan)**
 
 ---
 
-## ✨ Features
+## 🌟 Overview
 
-### 🤖 AI-Powered Chat
-- Intelligent natural-language conversations
-- Context-aware responses
-- Real-time streaming responses
-- Conversation history
-- Modern responsive chat interface
+**My AI Fusion** is a production-grade full-stack AI platform that unifies state-of-the-art LLM capabilities, multimodal document understanding, deterministic handwriting synthesis, client-side WebAssembly compute, and autonomous multi-agent systems into an intuitive, ultra-fast workspace.
 
-### 🧠 Multi-Model AI
-- Integration with multiple Gemini models
-- Fast and reasoning-oriented model options
-- Dynamic model selection
-- Automatic model fallback
-- Legacy model compatibility
-- Automatic model upgrades
+---
 
-### 🛡️ AI Reliability System
-My AI Fusion includes a multi-level fallback architecture.
+## ✨ Flagship Feature Matrix
 
-```text
-Primary AI Model
-       │
-       ├── Success ─────────► Response
-       │
-       └── Failure
-             │
-             ▼
-        Fallback Model
-             │
-             ├── Success ───► Response
-             │
-             └── Failure
-                   │
-                   ▼
-              Next Model
+### 🧠 1. Human-Like AI Intelligence Suite
+- **🎙️ Real-Time Conversational Voice Call Mode**:
+  - Full-duplex conversational voice call interface with an animated 3D pulsating audio frequency orb.
+  - Automated 1.2s silence turn-taking detection, instant interruption (*barge-in*) handling, and low-latency text-to-speech synthesis.
+  - Live transcript drawer with microphone mute and speaker toggles.
+- **🤖 Autonomous Multi-Step Task Agent**:
+  - Automatically decomposes complex engineering goals into multi-stage execution pipelines (`plan`, `search`, `code`, `verify`, `reflect`, `finalize`).
+  - Real-time execution trace logs, self-critique/self-correction callouts, and packaged code artifacts.
+- **💡 "Thinking Out Loud" Cognitive Monologue Stream**:
+  - Collapsible 5-stage Chain-of-Thought drawer (*Hypothesis ➔ Analysis ➔ Counterpoint & Risk ➔ Refinement ➔ Decision*) exposing internal human-like reasoning.
+- **💻 Interactive Multi-File Project Workspace & Live Sandbox**:
+  - Side-by-side IDE with a file tree explorer, tabbed code editor, live HTML/CSS/JS sandbox runner with mobile/desktop viewports, and one-click JSON/ZIP project export.
+- **🎭 Emotional Intelligence & Adaptive Tone (EQ Engine)**:
+  - Real-time sentiment & intent classifier (*Urgent ⚡, Frustrated 🛡️, Curious 💡, Analytical 🎯, Celebratory 🎉*) with dynamic tone modulation.
+- **📄 Deep Multimodal Document & PDF Visual Inspector**:
+  - Page-by-page document breakdowns, executive summaries, AI margin notes with clause commentary, and extracted tabular data tables.
+- **🔮 Proactive Assistant & Smart Next-Step Anticipation**:
+  - One-click contextual action chips (*"🧪 Generate Unit Tests"*, *"⚡ Benchmark & Optimize"*, *"🎨 Draw on Infinite Canvas"*, *"🗂️ Create Study Deck"*) rendered below messages.
 
+---
 
-This helps maintain service availability when an AI model is temporarily unavailable, overloaded, deprecated, or returns an API error.
-📊 Data Visualization
-Turn AI-generated or user-provided data into visual representations.
-Interactive graphs and charts
-Data-driven analysis
-Structured data processing
-AI-assisted visualization
-Useful for reports, analysis, and presentations
-🖼️ AI Image Generation
-Create images from natural-language prompts.
-AI-powered image generation
-High-quality creative output
-Prompt-based generation
-Integrated generation workflow
-📄 AI Document Generation
-Generate useful documents with AI.
-Structured document creation
-AI-generated reports and content
-Export workflows
-Document processing
-Productivity-focused generation tools
-☁️ Cloud & File Features
-Cloud synchronization support
-File handling
-Document workflows
-Export and backup capabilities
-Structured content management
-⚡ Performance
-The application is designed for a responsive AI experience with:
-Streaming responses
-Efficient API communication
-Error handling
-Automatic fallback mechanisms
-Responsive UI
-Modular architecture
-🏗️ Architecture
-                         ┌──────────────────────┐
-                         │     My AI Fusion     │
-                         │    Web Interface     │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Application Layer  │
-                         │ Chat • Context • UI  │
-                         └──────────┬───────────┘
-                                    │
-                  ┌─────────────────┼─────────────────┐
-                  ▼                 ▼                 ▼
-           ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-           │  Gemini API │  │  AI Tools   │  │ File/Cloud  │
-           │    Models   │  │ & Services  │  │  Workflows  │
-           └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-                  │                 │                 │
-                  └─────────────────┼─────────────────┘
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Generated Results  │
-                         │ Chat • Graphs •      │
-                         │ Images • Documents   │
-                         └──────────────────────┘
-🧩 Core AI Workflow
-User Request
-     │
-     ▼
-Application Interface
-     │
-     ▼
-Context & Request Processing
-     │
-     ▼
-AI Model Selection
-     │
-     ▼
-Gemini API
-     │
-     ├──────────────► Success
-     │                    │
-     │                    ▼
-     │              Process Response
-     │                    │
-     │                    ▼
-     │              User Interface
-     │
-     └──────────────► Failure
-                          │
-                          ▼
-                    Fallback Model
-                          │
-                          ▼
-                       Retry
-🛠️ Technology Stack
-Frontend
-Next.js
-React
-TypeScript
-Modern responsive UI
-Backend & AI
-Gemini API
-AI model orchestration
-Streaming responses
-Server-side API architecture
-Automatic model fallback
-Context management
-Visualization
-Interactive charts
-Data processing
-AI-assisted visualization
-Content & Files
-Document generation
-Image generation
-File processing
-Export workflows
-Cloud synchronization
-Development
-Git
-GitHub
-npm
-Environment-based configuration
-🔐 Security
-API credentials are handled through environment variables and should never be committed to the repository.
-Example:
-GEMINI_API_KEY=your_api_key_here
-Sensitive environment files are excluded through .gitignore.
-Never expose your real API key in source code or public repositories.
-🚀 Getting Started
-Prerequisites
-Make sure you have installed:
-Node.js
-npm
-Git
-1. Clone the repository
+### 🎨 2. Next-Gen Creative & Computing Tools
+- **🎨 Infinite AI Canvas & Diagram Whiteboard**:
+  - Infinite 2D pan/zoom whiteboard (20% to 300%) rendering system architectures, flowcharts, and concept maps with draggable nodes, bezier curves, and SVG vector export.
+- **🎭 Multi-Agent Debate & "Panel of Experts" Mode**:
+  - Orchestrates structured debates between 4 specialized personas (*Dr. Aris Vance* [Proponent], *Elena Rostova* [Skeptic], *Marcus Brody* [Pragmatist], and *Athena Core* [Synthesizer]) with trade-off matrices and actionable consensus.
+- **🐍 In-Browser Python & Data Science Sandbox (Pyodide REPL)**:
+  - Zero-backend client-side Python 3 execution via WebAssembly, supporting `stdout`/`stderr` terminal consoles and live **Matplotlib** chart captures.
+- **🗂️ Quiz & Flashcard Study Deck Engine (SuperMemo SM-2)**:
+  - 3D interactive flip flashcards with spaced repetition algorithms calculating optimal review intervals (*Again, Hard, Good, Easy*), plus multiple-choice quizzes with explanations.
+- **🎙️ Audio Meeting & Lecture Summarizer**:
+  - Structured meeting minutes with timestamp scrubber, executive takeaways, decision logs, and an interactive action item checklist with assignees.
+- **🌐 Deep Autonomous Research Agent**:
+  - Multi-hop web research visualization with real-time stage progress (*Planning, Searching, Verifying, Synthesizing*) and source credibility scoring.
+- **🧠 Personal Memory & Knowledge Hub**:
+  - Persistent user preference management center (*Tech Stack, Style Rules, Bio, Facts*) with pin/unpin controls and automatic context injection.
+- **🎨 AI Image Studio & Variation Lab**:
+  - Interactive visual art studio with 8 style presets (*Photorealistic 8K, Cyberpunk Neon, Studio Anime, Isometric 3D, Minimalist Vector, Oil Painting, Watercolor, Retro 80s Synthwave*) and aspect ratio selector.
+
+---
+
+### ✍️ 3. Deterministic Handwritten Notes & Document Synthesis
+- **Deterministic Handwriting Engine**:
+  - Generates 100% spelling-accurate, multi-page handwritten notes, essays, and assignments.
+  - Paper textures: `lined`, `legal-pad`, `blank`, `grid`, `parchment`, `chalkboard`.
+  - Inks: `blue`, `black`, `royal-blue`, `gel-black`, `red`, `emerald`, `pencil`, `white`.
+  - Handwriting fonts: `Caveat`, `Kalam`, `Patrick Hand`, `Architects Daughter`, `Apple Script`, `Dancing Script`, `Indie Flower`, `Shadows Into Light`.
+  - High-res PNG & SVG vector download.
+- **Interactive Slide Decks & Mind Maps**:
+  - Presenter-mode slide decks with speaker notes and PDF export.
+  - Hierarchical mind map node graphs with zoom/pan and branch collapse.
+
+---
+
+## ⚡ Speed & Performance Architecture
+
+My AI is engineered for ultra-low latency:
+1. **Sub-400ms Time To First Token (TTFT)**: Non-blocking SSE stream parsing for concurrent reasoning and text tokens.
+2. **Sliding-Window Context Pruning**: Preserves core prompt goals while pruning historical image payloads in long conversations (16+ turns), preventing token lag.
+3. **HTTP/2 & Keep-Alive Connection Reuse**: Eliminates repetitive TCP handshake and TLS negotiation overhead.
+4. **Multi-Tier Fallback Resilience**: Automated failover to active Gemini Flash models during provider traffic spikes.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend & App Router**: Next.js 16 (App Router), React 19, TypeScript
+- **Styling & UI**: Tailwind CSS, Glassmorphism, Lucide Icons
+- **AI Core & Routing**: Google Gemini 3.6 Flash / 3.7 Pro, Provider-Agnostic AI Gateway
+- **Compute & Sandbox**: Pyodide (Python in WebAssembly), HTML/JS Live Iframe Sandbox
+- **Memory & Storage**: LocalStorage + Encrypted Cloud Sync, SuperMemo SM-2 Engine
+- **Auth & Security**: Clerk Authentication, SSRF Protection, Server-Side Rate Limiter, Zero-Secrets Memory Guard
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- npm
+
+### 1. Clone & Install
+```bash
 git clone https://github.com/SaiVardhan-os/My-AI-Fusion-.git
-2. Open the project
 cd My-AI-Fusion-
-3. Install dependencies
 npm install
-4. Configure environment variables
-Create your local environment file and add your API key:
-GEMINI_API_KEY=your_api_key_here
-5. Start the development server
+```
+
+### 2. Configure Environment
+Create a `.env.local` file in the root directory:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+```
+
+### 3. Run Development Server
+```bash
 npm run dev
-Open the application at:
-http://localhost:3000
-📂 Project Structure
-My-AI-Fusion/
-│
-├── src/
-│   ├── components/
-│   │   ├── chat/
-│   │   ├── sidebar/
-│   │   └── ...
-│   │
-│   ├── lib/
-│   │   ├── tools/
-│   │   ├── vision/
-│   │   ├── audio/
-│   │   └── ...
-│   │
-│   └── ...
-│
-├── public/
-├── package.json
-├── next.config.*
-├── tsconfig.json
-├── .gitignore
-└── README.md
-🎯 Project Objectives:
-My AI Fusion is built to explore and demonstrate practical AI application development.
-The major objectives are:
-Build a unified AI platform
-Integrate multiple AI capabilities
-Implement reliable AI API communication
-Support multiple AI models
-Handle model failures gracefully
-Build useful AI-powered tools
-Create a scalable full-stack architecture
-Provide a modern user experience
-💼 Engineering Highlights:
-This project demonstrates practical experience with:
-Full-stack web development
-React and Next.js
-TypeScript
-REST/API integration
-AI API integration
-Multi-model architecture
-Streaming data
-Error handling
-Automatic fallback systems
-File processing
-Data visualization
-Image generation workflows
-Document generation
-Cloud synchronization
-Git and GitHub
-Environment-based security
-🔮 Roadmap:
-Planned improvements include:
-👤 User authentication and profiles
-🔐 Secure account management
-📊 Usage tracking
-💳 Subscription and monetization
-👑 Admin/owner dashboard
-☁️ Improved cloud storage
-📱 Progressive Web App / mobile experience
-⚡ Performance optimization
-🔌 Additional AI model providers
-📈 Advanced analytics
-🧠 More AI-powered tools
-🌐 Deployment:
-The application can be deployed using modern cloud platforms that support Next.js applications.
-Before deployment:
-Configure environment variables.
-Add the required API credentials securely.
-Build the production application.
-Deploy the application.
-Never expose API keys in client-side code.
-📸 Screenshots
-🎥 Demo
-Add a demo video or live application link here after deployment.
-⭐ Why My AI Fusion?
-Most AI applications focus on a single capability.
-My AI Fusion aims to bring multiple AI workflows into one unified platform.
-Instead of switching between different tools for:
-💬 AI conversations
-🧠 Reasoning
-📊 Data visualization
-🖼️ Image generation
-📄 Document generation
-☁️ File workflows
-users can access these capabilities through one application.
-The project focuses not only on generating AI responses, but also on the engineering required to build a reliable, extensible, and practical AI product.
-📈 Project Status:
-🚧 Active Development
-My AI Fusion is continuously evolving with new AI capabilities, improvements, and product features.
-👨‍💻 Developer:
-Komirishetty Sai Vardhan
-Engineering-focused developer building AI-powered applications and exploring modern full-stack technologies.
-📬 Contributions & Feedback:
-Feedback, ideas, and suggestions are welcome.
-If you find the project interesting, consider giving the repository a ⭐ Star.
-📄 License:
-This project currently does not specify an open-source license.
-All rights reserved unless otherwise stated by the project owner.
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧪 Testing & Verification
+
+Run the automated test suites:
+```bash
+# Run all regression tests
+npm test
+
+# Run Human-Like AI Intelligence test suite
+npm run test:human
+
+# Run Next-Gen Features test suite
+npm run test:nextgen
+
+# Run TypeScript compilation check
+npx tsc --noEmit
+```
+
+---
+
+## 👨‍💻 Author & Developer
+
+**Komirishetty Sai Vardhan**
+- Sole Creator & Lead Developer of **My AI Fusion**
+- GitHub: [@Komirishetty-SaiVardhan](https://github.com/Komirishetty-SaiVardhan)
+
+---
+
+## 📄 License
+All rights reserved © 2026 Komirishetty Sai Vardhan.
